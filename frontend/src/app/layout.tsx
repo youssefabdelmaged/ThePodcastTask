@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   keywords: ["podcast", "audio", "streaming", "discovery"],
   authors: [{ name: "Podcastr Team" }],
   viewport: "width=device-width, initial-scale=1",
+  icons: {
+    icon: "/favicon.ico",
+  },
 };
 
 export default function RootLayout({

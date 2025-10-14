@@ -1,26 +1,85 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 
 export default function AudioPlayer() {
+  const audioRef = useRef(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration] = useState(0);
+
+  // Format seconds → mm:ss
+  const formatTime = (time) => {
+    if (isNaN(time)) return "00:00";
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes < 10 ? "0" : ""}${minutes}:${
+      seconds < 10 ? "0" : ""
+    }${seconds}`;
+  };
+
+  // Handle play/pause toggle
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play();
+    }
+    setIsPlaying(!isPlaying);
+  };
+
+  // Update progress as song plays
+  useEffect(() => {
+    const audio = audioRef.current;
+
+    const updateProgress = () => {
+      setCurrentTime(audio.currentTime);
+      setDuration(audio.duration);
+    };
+
+    if (audio) {
+      audio.addEventListener("timeupdate", updateProgress);
+      audio.addEventListener("loadedmetadata", updateProgress);
+    }
+
+    return () => {
+      if (audio) {
+        audio.removeEventListener("timeupdate", updateProgress);
+        audio.removeEventListener("loadedmetadata", updateProgress);
+      }
+    };
+  }, []);
+
+  // Handle user seeking (clicking progress bar)
+  const handleSeek = (e) => {
+    const rect = e.target.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const newTime = (clickX / rect.width) * duration;
+    audioRef.current.currentTime = newTime;
+    setCurrentTime(newTime);
+  };
 
   return (
-    <div className="w-80 bg-purple-500 border-l border-gray-200 flex flex-col">
+    <div className="w-96 flex flex-col" style={{ backgroundColor: "#8257E5" }}>
       {/* Header */}
-      <div className="p-6 border-b border-gray-200">
+      <div className="p-6 flex justify-center items-center ">
         <div className="flex items-center space-x-2">
           <Image
             src="/assets/Headphone.svg"
             alt="Now Playing"
-            width={24}
-            height={24}
-            className="w-6 h-6"
+            width={32}
+            height={32}
+            className="w-8 h-8"
           />
-          <span className="text-sm font-medium text-gray-900">
+          <span
+            className="text-white font-medium"
+            style={{
+              fontSize: "16px",
+              lineHeight: "20px",
+            }}
+          >
             Tocando agora
           </span>
         </div>
@@ -28,111 +87,176 @@ export default function AudioPlayer() {
 
       {/* Player Content */}
       <div className="flex-1 flex flex-col items-center justify-center p-6">
-        <div className="w-full h-64 border-2 border-dashed border-purple-300 rounded-lg flex items-center justify-center bg-purple-50">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg
-                className="w-8 h-8 text-purple-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                />
-              </svg>
-            </div>
-            <p className="text-sm text-purple-700 font-medium">
-              Selecione um podcast para ouvir
-            </p>
-          </div>
+        <div
+          className="w-[320px] h-[360px] border-[1.5px] border-dashed rounded-[24px] flex items-center justify-center"
+          style={{
+            background:
+              "linear-gradient(143.8deg, rgba(145, 100, 250, 0.8) 0%, rgba(145, 100, 250, 0) 100%)",
+            borderColor: "#9F75FF",
+          }}
+        >
+          <p
+            className="text-center text-white"
+            style={{
+              fontFamily: "Lexend",
+              fontWeight: 600,
+              fontSize: "18px",
+              lineHeight: "22px",
+            }}
+          >
+            Selecione um podcast para ouvir
+          </p>
         </div>
       </div>
 
       {/* Player Controls */}
-      <div className="p-6 border-t border-gray-200">
+      <div className="p-6">
+        {/* AUDIO ELEMENT */}
+        <audio
+          ref={audioRef}
+          src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+        />
+
         {/* Progress Bar */}
-        <div className="mb-4">
-          <div className="flex justify-between text-xs text-gray-500 mb-2">
-            <span>00:00</span>
-            <span>00:00</span>
+        <div className="mb-4 relative">
+          <div className="relative flex items-center justify-between gap-4">
+            {/* Left time */}
+            <span
+              className="text-white absolute left-0 mr-2"
+              style={{
+                fontFamily: "Inter",
+                fontWeight: 400,
+                fontSize: "14px",
+                lineHeight: "17px",
+              }}
+            >
+              {formatTime(currentTime)}
+            </span>
+
+            {/* Progress track container */}
+            <div className="flex-1 mx-8 relative">
+              {/* Background track */}
+              <div
+                className="w-full h-1.5 rounded-[10px]"
+                style={{
+                  backgroundColor: "#9F75FF",
+                  opacity: 0.5,
+                }}
+              />
+              {/* Progress fill - only visible when playing */}
+              <div
+                className="absolute    top-0 h-1.5 rounded-[10px] transition-all duration-300"
+                style={{
+                  backgroundColor: "#444",
+                  width: `${
+                    isPlaying && duration > 0
+                      ? (currentTime / duration) * 100
+                      : 0
+                  }%`,
+                  visibility: isPlaying && duration > 0 ? "visible" : "hidden",
+                }}
+              />
+              {/* Progress handle - only visible when playing */}
+              <div
+                className="absolute top-[-2px] w-3 h-3 rounded-full border-4 border-solid transition-all duration-300"
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  borderColor: "#04D361",
+                  left: `${
+                    isPlaying && duration > 0
+                      ? (currentTime / duration) * 100
+                      : 0
+                  }%`,
+                  transform: "translateX(-50%)",
+                  visibility: isPlaying && duration > 0 ? "visible" : "hidden",
+                }}
+              />
+            </div>
+
+            {/* Right time */}
+            <span
+              className="text-white absolute right-0 ml-2"
+              style={{
+                fontFamily: "Inter",
+                fontWeight: 400,
+                fontSize: "14px",
+                lineHeight: "17px",
+              }}
+            >
+              {formatTime(duration)}
+            </span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-1">
-            <div
-              className="bg-green-500 h-1 rounded-full transition-all duration-300"
-              style={{ width: `${(currentTime / duration) * 100}%` }}
+        </div>
+      </div>
+
+      {/* Control Buttons */}
+      <div className="flex items-center justify-center space-x-6">
+        <button className="text-white hover:text-gray-300 transition-colors">
+          <Image
+            src="/assets/Group.png"
+            alt="Shuffle"
+            width={24}
+            height={24}
+            className="w-6 h-6"
+          />
+        </button>
+
+        <button className="text-white hover:text-gray-300 transition-colors">
+          <Image
+            src="/assets/play-previous.svg"
+            alt="Previous"
+            width={24}
+            height={24}
+            className="w-6 h-6"
+          />
+        </button>
+
+        <button
+          onClick={togglePlay}
+          className="w-12 h-12 flex items-center justify-center transition-colors"
+          style={{
+            backgroundColor: "#9164FA",
+            borderRadius: "16px",
+          }}
+        >
+          {isPlaying ? (
+            <Image
+              src="/assets/Union.png"
+              alt="Pause"
+              width={24}
+              height={24}
+              className="w-6 h-6"
             />
-          </div>
-        </div>
+          ) : (
+            <Image
+              src="/assets/Vector.png"
+              alt="Play"
+              width={24}
+              height={24}
+              className="w-6 h-6"
+            />
+          )}
+        </button>
 
-        {/* Control Buttons */}
-        <div className="flex items-center justify-center space-x-6">
-          <button className="text-gray-400 hover:text-gray-600 transition-colors">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M8.445 14.832A1 1 0 0010 14v-2.798l5.445 3.63A1 1 0 0017 14V6a1 1 0 00-1.555-.832L10 8.798V6a1 1 0 00-1.555-.832l-6 4a1 1 0 000 1.664l6 4z" />
-            </svg>
-          </button>
+        <button className="text-white hover:text-gray-300 transition-colors">
+          <Image
+            src="/assets/play-next.svg"
+            alt="Next"
+            width={24}
+            height={24}
+            className="w-6 h-6"
+          />
+        </button>
 
-          <button className="text-gray-400 hover:text-gray-600 transition-colors">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M15.707 15.707a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 010 1.414zm-6 0a1 1 0 01-1.414 0l-5-5a1 1 0 010-1.414l5-5a1 1 0 011.414 1.414L5.414 10l4.293 4.293a1 1 0 010 1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-
-          <button
-            onClick={() => setIsPlaying(!isPlaying)}
-            className="w-12 h-12 bg-green-500 hover:bg-green-600 rounded-full flex items-center justify-center text-white transition-colors"
-          >
-            {isPlaying ? (
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 00-1 1v2a1 1 0 002 0V9a1 1 0 00-1-1zm4 0a1 1 0 00-1 1v2a1 1 0 002 0V9a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            ) : (
-              <svg
-                className="w-6 h-6 ml-1"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            )}
-          </button>
-
-          <button className="text-gray-400 hover:text-gray-600 transition-colors">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-
-          <button className="text-gray-400 hover:text-gray-600 transition-colors">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path
-                fillRule="evenodd"
-                d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
-                clipRule="evenodd"
-              />
-            </svg>
-          </button>
-        </div>
+        <button className="text-white hover:text-gray-300 transition-colors">
+          <Image
+            src="/assets/repeat.svg"
+            alt="Repeat"
+            width={24}
+            height={24}
+            className="w-6 h-6"
+          />
+        </button>
       </div>
     </div>
   );
