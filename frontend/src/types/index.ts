@@ -17,15 +17,30 @@ export interface Podcast {
 
 export interface Episode {
   id: string | number;
-  podcastId: string | number;
+  podcastId?: string | number;
   title: string;
-  description: string;
-  duration: number; // in seconds
-  audioUrl: string;
-  publishedAt: Date;
+  duration: string; // formatted e.g. HH:MM:SS or MM:SS
+  audioUrl?: string;
+  publishedAt?: Date;
   transcriptUrl?: string;
   showNotes?: string;
   chapterMarks?: ChapterMark[];
+  hosts: string;
+  date: string;
+  thumbnail: string;
+  isPlaying?: boolean;
+}
+
+export interface FeaturedEpisode extends Episode {
+  description?: string;
+}
+
+export interface PlayerState {
+  currentEpisode: Episode | null;
+  isPlaying: boolean;
+  currentTime: number;
+  duration: number;
+  volume: number;
 }
 
 export interface ChapterMark {

@@ -2,16 +2,25 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { usePlayer } from "./PlayerProvider";
 
 export default function AudioPlayer() {
-  const audioRef = useRef(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
+  const {
+    playerState,
+    togglePlayPause,
+    seek,
+    previous,
+    next,
+    shuffle,
+    repeat,
+  } = usePlayer();
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [duration, setDuration] = useState<number>(0);
+  const [currentTime, setCurrentTime] = useState<number>(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
   // Format seconds → mm:ss
-  const formatTime = (time) => {
+  const formatTime = (time: number) => {
     if (isNaN(time)) return "00:00";
     const minutes = Math.floor(time / 60);
     const seconds = Math.floor(time % 60);
@@ -20,46 +29,76 @@ export default function AudioPlayer() {
     }${seconds}`;
   };
 
-  // Handle play/pause toggle
+  // Handle play/pause toggle using parent state
   const togglePlay = () => {
-    if (!audioRef.current) return;
-    if (isPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play();
-    }
-    setIsPlaying(!isPlaying);
+    togglePlayPause();
   };
 
-  // Update progress as song plays
+  // Update progress as audio plays and inform parent
   useEffect(() => {
     const audio = audioRef.current;
+    if (!audio) return;
 
-    const updateProgress = () => {
-      setCurrentTime(audio.currentTime);
-      setDuration(audio.duration);
+    const handleTimeUpdate = () => {
+      setCurrentTime(audio.currentTime || 0);
+      seek?.(audio.currentTime || 0);
     };
 
-    if (audio) {
-      audio.addEventListener("timeupdate", updateProgress);
-      audio.addEventListener("loadedmetadata", updateProgress);
-    }
+    const handleLoadedMetadata = () => {
+      setDuration(audio.duration || 0);
+    };
+
+    audio.addEventListener("timeupdate", handleTimeUpdate);
+    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
 
     return () => {
-      if (audio) {
-        audio.removeEventListener("timeupdate", updateProgress);
-        audio.removeEventListener("loadedmetadata", updateProgress);
-      }
+      audio.removeEventListener("timeupdate", handleTimeUpdate);
+      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
     };
-  }, []);
+  }, [seek]);
+
+  // Sync play/pause with parent state
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    if (playerState.isPlaying) {
+      audio.play().catch(() => {});
+    } else {
+      audio.pause();
+    }
+  }, [playerState.isPlaying]);
+
+  // When episode changes, load new source
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    // Set source; use episode audioUrl if available, else fallback sample
+    const episode = playerState.currentEpisode;
+    const src =
+      (episode &&
+        typeof (episode as { audioUrl?: string }).audioUrl === "string" &&
+        (episode as { audioUrl?: string }).audioUrl) ||
+      "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+    if (audio.src !== src) {
+      audio.src = src;
+      audio.load();
+      setCurrentTime(0);
+      // Autoplay if requested
+      if (playerState.isPlaying) {
+        audio.play().catch(() => {});
+      }
+    }
+  }, [playerState.currentEpisode, playerState.isPlaying]);
 
   // Handle user seeking (clicking progress bar)
-  const handleSeek = (e) => {
-    const rect = e.target.getBoundingClientRect();
+  const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!audioRef.current) return;
+    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const newTime = (clickX / rect.width) * duration;
     audioRef.current.currentTime = newTime;
     setCurrentTime(newTime);
+    seek?.(newTime);
   };
 
   // Toggle full screen mode
@@ -71,7 +110,7 @@ export default function AudioPlayer() {
     <>
       {/* Desktop Player - Hidden on small screens */}
       <div
-        className="hidden md:block w-96 flex flex-col h-screen lg:h-screen"
+        className="hidden md:flex w-96 flex-col h-screen lg:h-screen"
         style={{ backgroundColor: "#8257E5" }}
       >
         {/* Header */}
@@ -98,35 +137,61 @@ export default function AudioPlayer() {
 
         {/* Player Content */}
         <div className="flex-1 flex flex-col items-center justify-center p-6 py-25">
-          <div
-            className="w-[320px] h-[360px] border-[1.5px] border-dashed rounded-[24px] flex items-center justify-center"
-            style={{
-              background:
-                "linear-gradient(143.8deg, rgba(145, 100, 250, 0.8) 0%, rgba(145, 100, 250, 0) 100%)",
-              borderColor: "#9F75FF",
-            }}
-          >
-            <p
-              className="text-center text-white"
+          {playerState.currentEpisode ? (
+            <div
+              className="w-[320px] h-[360px] rounded-[24px] flex flex-col items-center justify-center gap-4 p-4"
               style={{
-                fontFamily: "Lexend",
-                fontWeight: 600,
-                fontSize: "18px",
-                lineHeight: "22px",
+                background:
+                  "linear-gradient(143.8deg, rgba(145, 100, 250, 0.8) 0%, rgba(145, 100, 250, 0) 100%)",
+                borderColor: "#9F75FF",
+                borderWidth: 1.5,
+                borderStyle: "dashed",
               }}
             >
-              Selecione um podcast para ouvir
-            </p>
-          </div>
+              <Image
+                src={playerState.currentEpisode.thumbnail}
+                alt={playerState.currentEpisode.title}
+                width={200}
+                height={200}
+                className="w-48 h-48 object-cover rounded-xl"
+              />
+              <div className="text-center px-2">
+                <p className="text-white font-lexend font-semibold text-base line-clamp-2">
+                  {playerState.currentEpisode.title}
+                </p>
+                <p className="text-white/80 font-inter text-sm line-clamp-1">
+                  {playerState.currentEpisode.hosts}
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="w-[320px] h-[360px] border-[1.5px] border-dashed rounded-[24px] flex items-center justify-center"
+              style={{
+                background:
+                  "linear-gradient(143.8deg, rgba(145, 100, 250, 0.8) 0%, rgba(145, 100, 250, 0) 100%)",
+                borderColor: "#9F75FF",
+              }}
+            >
+              <p
+                className="text-center text-white"
+                style={{
+                  fontFamily: "Lexend",
+                  fontWeight: 600,
+                  fontSize: "18px",
+                  lineHeight: "22px",
+                }}
+              >
+                Selecione um podcast para ouvir
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Player Controls */}
         <div className="flex-1 flex flex-col justify-center p-8 pt-8">
           {/* AUDIO ELEMENT */}
-          <audio
-            ref={audioRef}
-            src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-          />
+          <audio ref={audioRef} />
 
           {/* Progress Bar */}
           <div className="mb-4 relative">
@@ -145,7 +210,7 @@ export default function AudioPlayer() {
               </span>
 
               {/* Progress track container */}
-              <div className="flex-1 mx-8 relative">
+              <div className="flex-1 mx-8 relative" onClick={handleSeek}>
                 {/* Background track */}
                 <div
                   className="w-full h-1.5 rounded-[10px]"
@@ -160,12 +225,9 @@ export default function AudioPlayer() {
                   style={{
                     backgroundColor: "#444",
                     width: `${
-                      isPlaying && duration > 0
-                        ? (currentTime / duration) * 100
-                        : 0
+                      duration > 0 ? (currentTime / duration) * 100 : 0
                     }%`,
-                    visibility:
-                      isPlaying && duration > 0 ? "visible" : "hidden",
+                    visibility: duration > 0 ? "visible" : "hidden",
                   }}
                 />
                 {/* Progress handle - only visible when playing */}
@@ -175,13 +237,10 @@ export default function AudioPlayer() {
                     backgroundColor: "#FFFFFF",
                     borderColor: "#04D361",
                     left: `${
-                      isPlaying && duration > 0
-                        ? (currentTime / duration) * 100
-                        : 0
+                      duration > 0 ? (currentTime / duration) * 100 : 0
                     }%`,
                     transform: "translateX(-50%)",
-                    visibility:
-                      isPlaying && duration > 0 ? "visible" : "hidden",
+                    visibility: duration > 0 ? "visible" : "hidden",
                   }}
                 />
               </div>
@@ -204,7 +263,10 @@ export default function AudioPlayer() {
 
         {/* Control Buttons */}
         <div className="flex-1 flex items-center justify-center space-x-6">
-          <button className="text-white hover:text-gray-300 transition-colors">
+          <button
+            className="text-white hover:text-gray-300 transition-colors"
+            onClick={shuffle}
+          >
             <Image
               src="/assets/Group.png"
               alt="Shuffle"
@@ -214,7 +276,10 @@ export default function AudioPlayer() {
             />
           </button>
 
-          <button className="text-white hover:text-gray-300 transition-colors">
+          <button
+            className="text-white hover:text-gray-300 transition-colors"
+            onClick={previous}
+          >
             <Image
               src="/assets/play-previous.svg"
               alt="Previous"
@@ -232,7 +297,7 @@ export default function AudioPlayer() {
               borderRadius: "16px",
             }}
           >
-            {isPlaying ? (
+            {playerState.isPlaying ? (
               <Image
                 src="/assets/Union.png"
                 alt="Pause"
@@ -251,7 +316,10 @@ export default function AudioPlayer() {
             )}
           </button>
 
-          <button className="text-white hover:text-gray-300 transition-colors">
+          <button
+            className="text-white hover:text-gray-300 transition-colors"
+            onClick={next}
+          >
             <Image
               src="/assets/play-next.svg"
               alt="Next"
@@ -261,7 +329,10 @@ export default function AudioPlayer() {
             />
           </button>
 
-          <button className="text-white hover:text-gray-300 transition-colors">
+          <button
+            className="text-white hover:text-gray-300 transition-colors"
+            onClick={repeat}
+          >
             <Image
               src="/assets/repeat.svg"
               alt="Repeat"
@@ -377,7 +448,7 @@ export default function AudioPlayer() {
               </span>
 
               {/* Progress track container */}
-              <div className="flex-1 mx-4 relative">
+              <div className="flex-1 mx-4 relative" onClick={handleSeek}>
                 {/* Background track */}
                 <div
                   className="w-full h-1.5 rounded-[10px]"
@@ -392,12 +463,9 @@ export default function AudioPlayer() {
                   style={{
                     backgroundColor: "#444",
                     width: `${
-                      isPlaying && duration > 0
-                        ? (currentTime / duration) * 100
-                        : 0
+                      duration > 0 ? (currentTime / duration) * 100 : 0
                     }%`,
-                    visibility:
-                      isPlaying && duration > 0 ? "visible" : "hidden",
+                    visibility: duration > 0 ? "visible" : "hidden",
                   }}
                 />
                 {/* Progress handle - only visible when playing */}
@@ -407,13 +475,10 @@ export default function AudioPlayer() {
                     backgroundColor: "#FFFFFF",
                     borderColor: "#04D361",
                     left: `${
-                      isPlaying && duration > 0
-                        ? (currentTime / duration) * 100
-                        : 0
+                      duration > 0 ? (currentTime / duration) * 100 : 0
                     }%`,
                     transform: "translateX(-50%)",
-                    visibility:
-                      isPlaying && duration > 0 ? "visible" : "hidden",
+                    visibility: duration > 0 ? "visible" : "hidden",
                   }}
                 />
               </div>
@@ -463,7 +528,7 @@ export default function AudioPlayer() {
                 borderRadius: "16px",
               }}
             >
-              {isPlaying ? (
+              {playerState.isPlaying ? (
                 <Image
                   src="/assets/Union.png"
                   alt="Pause"
@@ -504,10 +569,7 @@ export default function AudioPlayer() {
           </div>
 
           {/* AUDIO ELEMENT */}
-          <audio
-            ref={audioRef}
-            src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-          />
+          <audio ref={audioRef} />
         </div>
       )}
     </>

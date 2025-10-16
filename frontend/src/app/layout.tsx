@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import AudioPlayer from "@/components/AudioPlayer";
+import { PlayerProvider } from "@/components/PlayerProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,18 +34,20 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`}>
       <body className="min-h-screen bg-gray-50">
-        <div className="flex h-screen">
-          {/* Main Content Area */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <Header />
-            <main className="flex-1 overflow-y-auto bg-white">
-              <div className="max-w-7xl mx-auto px-6 py-8">{children}</div>
-            </main>
-          </div>
+        <PlayerProvider>
+          <div className="flex h-screen">
+            {/* Main Content Area */}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <Header />
+              <main className="flex-1 overflow-y-auto bg-white">
+                <div className="max-w-7xl mx-auto px-6 py-8">{children}</div>
+              </main>
+            </div>
 
-          {/* Audio Player Sidebar */}
-          <AudioPlayer />
-        </div>
+            {/* Audio Player Sidebar */}
+            <AudioPlayer />
+          </div>
+        </PlayerProvider>
       </body>
     </html>
   );
