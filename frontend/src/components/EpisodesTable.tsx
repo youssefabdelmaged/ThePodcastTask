@@ -1,16 +1,18 @@
-'use client';
-import { useState } from 'react';
-import IconButton from '@/ui/IconButton';
-import type { Episode } from '@/types';
-import Image from 'next/image';
+"use client";
+import { useState } from "react";
+import IconButton from "@/ui/IconButton";
+import type { Episode } from "@/types";
+import Image from "next/image";
 
 interface EpisodesTableProps {
-  episodes: Episode[]
-  onPlayEpisode: (episode: Episode) => void
+  episodes: Episode[];
+  onPlayEpisode: (episode: Episode) => void;
 }
 
 const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
-  const [hoveredEpisode, setHoveredEpisode] = useState<string | number | null>(null)
+  const [hoveredEpisode, setHoveredEpisode] = useState<string | number | null>(
+    null
+  );
 
   return (
     <section className="w-full mt-12 sm:mt-16">
@@ -22,8 +24,11 @@ const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
           </h2>
 
           {/* Table Container */}
-          <div className="w-full overflow-x-auto">
-            <table className="w-full min-w-[800px]" role="table">
+          <div className="w-full overflow-x-auto lg:overflow-x-visible">
+            <table
+              className="w-full min-w-[960px] xl:min-w-[1100px]"
+              role="table"
+            >
               {/* Table Header */}
               <thead>
                 <tr className="border-b border-border-primary">
@@ -55,9 +60,9 @@ const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
               <tbody>
                 {episodes.map((episode, index) => (
                   <tr
-                    key={episode.id}
+                    key={episode.title}
                     className={`border-b border-border-primary hover:bg-secondary-light transition-colors duration-200 ${
-                      index === episodes.length - 1 ? 'border-b-0' : ''
+                      index === episodes.length - 1 ? "border-b-0" : ""
                     }`}
                     onMouseEnter={() => setHoveredEpisode(episode.id)}
                     onMouseLeave={() => setHoveredEpisode(null)}
@@ -66,8 +71,8 @@ const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
                     <td className="py-3 sm:py-4">
                       <div className="flex items-center gap-3 sm:gap-4">
                         <Image
-                        width={20}
-                        height={20}
+                          width={20}
+                          height={20}
                           src={episode.thumbnail}
                           alt={episode.title}
                           className="w-8 h-8 sm:w-10 sm:h-10 object-cover rounded-sm"
@@ -109,7 +114,7 @@ const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
                           border_border_radius="rounded-sm"
                           fill_background_color="bg-button-secondary"
                           className={`border border-border-primary transition-all duration-200 ${
-                            hoveredEpisode === episode.id ? 'scale-105' : ''
+                            hoveredEpisode === episode.id ? "scale-105" : ""
                           }`}
                           onClick={() => onPlayEpisode(episode)}
                           aria-label={`Play ${episode.title}`}
@@ -122,26 +127,26 @@ const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
             </table>
           </div>
 
-          {/* Mobile-friendly episode info - Shown only on mobile */}
-          <div className="block sm:hidden space-y-4">
+          {/* Mobile-friendly episode info - Shown only on mobile (more compact) */}
+          <div className="block sm:hidden space-y-3">
             {episodes.map((episode) => (
               <div
-                key={`mobile-${episode.id}`}
-                className="flex items-center justify-between p-4 bg-background-card border border-border-primary rounded-lg"
+                key={`m${episode.title}`}
+                className="flex items-center justify-between p-3 bg-background-card border border-border-primary rounded-lg"
               >
                 <div className="flex items-center gap-3">
                   <Image
-                  width={20}
-                  height={20}
+                    width={56}
+                    height={56}
                     src={episode.thumbnail}
                     alt={episode.title}
-                    className="w-10 h-10 object-cover rounded-sm"
+                    className="w-14 h-14 object-cover rounded-md"
                   />
                   <div className="space-y-1">
-                    <h3 className="text-base font-lexend font-semibold leading-loose text-text-primary line-clamp-1">
+                    <h3 className="text-sm font-lexend font-semibold leading-snug text-text-primary line-clamp-1">
                       {episode.title}
                     </h3>
-                    <div className="flex items-center gap-2 text-sm text-text-secondary">
+                    <div className="flex items-center gap-2 text-xs text-text-secondary">
                       <span>{episode.hosts}</span>
                       <div className="w-1 h-1 bg-background-neutral rounded-full" />
                       <span>{episode.date}</span>
@@ -153,7 +158,7 @@ const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
                 <IconButton
                   src="/assets/img_play_arrow.png"
                   variant="ghost"
-                  size="medium"
+                  size="small"
                   onClick={() => onPlayEpisode(episode)}
                   aria-label={`Play ${episode.title}`}
                 />
@@ -163,7 +168,7 @@ const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
         </div>
       </div>
     </section>
-  )
-}
+  );
+};
 
-export default EpisodesTable
+export default EpisodesTable;

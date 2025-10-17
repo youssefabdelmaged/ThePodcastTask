@@ -7,6 +7,7 @@ import EpisodesTable from "./EpisodesTable";
 import Header from "./Header";
 import Image from "next/image";
 import { usePlayer } from "./PlayerProvider";
+import { fetchFeaturedEpisodes, fetchEpisodes } from "../api/podcasts";
 
 const PodcastPlatform = () => {
   const [featuredEpisodes, setFeaturedEpisodes] = useState<FeaturedEpisode[]>(
@@ -15,6 +16,7 @@ const PodcastPlatform = () => {
   const [allEpisodes, setAllEpisodes] = useState<Episode[]>([]);
   const { playerState, playEpisode, togglePlayPause } = usePlayer();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadPodcastData();
@@ -22,89 +24,23 @@ const PodcastPlatform = () => {
 
   const loadPodcastData = async (): Promise<void> => {
     try {
-      // Simulate API call with dummy data
-      setTimeout(() => {
-        const featured: FeaturedEpisode[] = [
-          {
-            id: "1",
-            title: "O que é um bom código?",
-            hosts: "Diego e Richard",
-            date: "8 Jan 21",
-            duration: "1:35:18",
-            thumbnail: "/assets/thumbnail.png",
-            audioUrl:
-              "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3",
-          },
-          {
-            id: "2",
-            title: "Como começar na programação...",
-            hosts: "Tiago, Diego e Pellizzetti",
-            date: "8 Jan 21",
-            duration: "35:40",
-            thumbnail: "/assets/thumbnail.png",
-            audioUrl:
-              "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3",
-          },
-        ];
+      setLoading(true);
+      setError(null);
 
-        const episodes: Episode[] = [
-          {
-            id: "3",
-            title: "A vida é boa",
-            hosts: "Tiago, Diego e Pellizzetti",
-            date: "8 Jan 21",
-            duration: "1:35:18",
-            thumbnail: "/assets/thumbnail.png",
-            audioUrl:
-              "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3",
-          },
-          {
-            id: "4",
-            title: "Como programar like a god",
-            hosts: "Maria, Tiago e Samuel",
-            date: "7 Jan 21",
-            duration: "35:40",
-            thumbnail: "/assets/thumbnail.png",
-            audioUrl:
-              "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3",
-          },
-          {
-            id: "5",
-            title: "Bora viver!",
-            hosts: "Diego e Richard",
-            date: "12 Fev 21",
-            duration: "54:27",
-            thumbnail: "/assets/thumbnail.png",
-            audioUrl:
-              "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3",
-          },
-          {
-            id: "6",
-            title: "Não desista de você",
-            hosts: "Pelpas, Pulili, Pepe e Pupa",
-            date: "24 Mar 21",
-            duration: "1:27:11",
-            thumbnail: "/assets/thumbnail.png",
-            audioUrl:
-              "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3",
-          },
-          {
-            id: "7",
-            title: "A vida é incrível",
-            hosts: "B1 e B2 descendo as escadas",
-            date: "25 Mar 21",
-            duration: "1:35:18",
-            thumbnail: "/assets/thumbnail.png",
-            audioUrl:
-              "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-7.mp3",
-          },
-        ];
+      // Fetch featured episodes and all episodes in parallel
+      const [featuredResponse, episodesResponse] = await Promise.all([
+        fetchFeaturedEpisodes(),
+        fetchEpisodes({ page: 1, limit: 20 }),
+      ]);
 
-        setFeaturedEpisodes(featured);
-        setAllEpisodes(episodes);
-        setLoading(false);
-      }, 1000);
-    } catch (_error) {
+      setFeaturedEpisodes(featuredResponse);
+      setAllEpisodes(episodesResponse.items);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error loading podcast data:", error);
+      setError(
+        "Falha ao carregar os episódios. Verifique sua conexão e tente novamente."
+      );
       setLoading(false);
     }
   };
@@ -168,6 +104,36 @@ const PodcastPlatform = () => {
               </div>
             </div>
           </div>
+        ) : error ? (
+          <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-16">
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <div className="mb-4">
+                <svg
+                  className="w-16 h-16 text-red-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-text-primary mb-2">
+                Oops! Algo deu errado
+              </h2>
+              <p className="text-text-secondary mb-4 max-w-md">{error}</p>
+              <button
+                onClick={loadPodcastData}
+                className="px-4 py-2 bg-button-primary text-text-white rounded-md hover:bg-button-primary-hover transition-colors"
+              >
+                Tentar novamente
+              </button>
+            </div>
+          </div>
         ) : (
           <>
             {/* Featured Episodes */}
@@ -190,7 +156,7 @@ const PodcastPlatform = () => {
 
       {/* Mobile Player - Shown only on mobile when episode is playing */}
       {playerState.currentEpisode && (
-        <div className="block lg:hidden fixed bottom-0 left-0 right-0 bg-background-accent p-4 border-t border-border-secondary">
+        <div className="block lg:hidden fixed bottom-3 left-3 right-3 bg-background-accent/95 p-4 border border-border-secondary rounded-xl shadow-lg">
           <div className="flex items-center gap-4">
             <Image
               src={playerState.currentEpisode.thumbnail}
