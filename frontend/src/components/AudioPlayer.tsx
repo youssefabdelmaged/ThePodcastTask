@@ -4,370 +4,263 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { usePlayer } from "./PlayerProvider";
 
+// ======== Subcomponents ========
+
+// 1️⃣ Header
+function PlayerHeader() {
+  return (
+    <div className="flex justify-center items-center space-x-2">
+      <Image src="/assets/Headphone.svg" alt="Now Playing" width={32} height={32} />
+      <span className="text-white text-base font-medium">Tocando agora</span>
+    </div>
+  );
+}
+
+// 2️⃣ Player Content
+function PlayerContent({ episode }: { episode: any }) {
+  if (!episode) {
+    return (
+      <div className="w-[320px] h-[360px] border-[1.5px] border-dashed rounded-[24px] flex items-center justify-center text-white">
+        <p className="font-lexend font-semibold text-lg text-center px-4">
+          Selecione um podcast para ouvir
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="w-[320px] h-[360px] rounded-[24px] flex flex-col items-center justify-center gap-4 p-4"
+      style={{
+        background:
+          "linear-gradient(143.8deg, rgba(145, 100, 250, 0.8) 0%, rgba(145, 100, 250, 0) 100%)",
+        borderColor: "#9F75FF",
+        borderWidth: 1.5,
+        borderStyle: "dashed",
+      }}
+    >
+      <Image
+        src={episode.thumbnail}
+        alt={episode.title}
+        width={200}
+        height={200}
+        className="w-48 h-48 object-cover rounded-xl"
+      />
+      <div className="text-center px-2">
+        <p className="text-white font-lexend font-semibold text-base line-clamp-2">
+          {episode.title}
+        </p>
+        <p className="text-white/80 font-inter text-sm line-clamp-1">{episode.hosts}</p>
+      </div>
+    </div>
+  );
+}
+
+// 3️⃣ Progress Bar
+function ProgressBar({
+  currentTime,
+  duration,
+  onSeek,
+  formatTime,
+}: {
+  currentTime: number;
+  duration: number;
+  onSeek: (e: React.MouseEvent<HTMLDivElement>) => void;
+  formatTime: (t: number) => string;
+}) {
+  return (
+    <div className="mb-4 relative">
+      <div className="relative flex items-center justify-between gap-4">
+        <span className="text-white text-sm">{formatTime(currentTime)}</span>
+
+        <div className="flex-1 mx-4 relative cursor-pointer" onClick={onSeek}>
+          <div className="w-full h-1.5 rounded-full bg-purple-400/50" />
+          <div
+            className="absolute top-0 h-1.5 rounded-full bg-gray-700 transition-all duration-300"
+            style={{
+              width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
+            }}
+          />
+          <div
+            className="absolute top-[-2px] w-3 h-3 rounded-full bg-white border-4 border-green-400 transition-all duration-300"
+            style={{
+              left: `${duration > 0 ? (currentTime / duration) * 100 : 0}%`,
+              transform: "translateX(-50%)",
+            }}
+          />
+        </div>
+
+        <span className="text-white text-sm">{formatTime(duration)}</span>
+      </div>
+    </div>
+  );
+}
+
+// 4️⃣ Player Controls
+function PlayerControls({
+  isPlaying,
+  togglePlay,
+  previous,
+  next,
+  shuffle,
+  repeat,
+}: {
+  isPlaying: boolean;
+  togglePlay: () => void;
+  previous: () => void;
+  next: () => void;
+  shuffle: () => void;
+  repeat: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-center space-x-6">
+      <button onClick={shuffle}>
+        <Image src="/assets/Group.png" alt="Shuffle" width={24} height={24} />
+      </button>
+
+      <button onClick={previous}>
+        <Image src="/assets/play-previous.svg" alt="Previous" width={24} height={24} />
+      </button>
+
+      <button
+        onClick={togglePlay}
+        className="w-12 h-12 flex items-center justify-center bg-purple-500 rounded-2xl"
+      >
+        <Image
+          src={isPlaying ? "/assets/Union.png" : "/assets/Vector.png"}
+          alt={isPlaying ? "Pause" : "Play"}
+          width={24}
+          height={24}
+        />
+      </button>
+
+      <button onClick={next}>
+        <Image src="/assets/play-next.svg" alt="Next" width={24} height={24} />
+      </button>
+
+      <button onClick={repeat}>
+        <Image src="/assets/repeat.svg" alt="Repeat" width={24} height={24} />
+      </button>
+    </div>
+  );
+}
+
+// ======== Main Player Component ========
+
 export default function AudioPlayer() {
-  const {
-    playerState,
-    togglePlayPause,
-    seek,
-    previous,
-    next,
-    shuffle,
-    repeat,
-  } = usePlayer();
+  const { playerState, togglePlayPause, seek, previous, next, shuffle, repeat } = usePlayer();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [duration, setDuration] = useState<number>(0);
-  const [currentTime, setCurrentTime] = useState<number>(0);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
   const [isFullScreen, setIsFullScreen] = useState(false);
 
-  // Format seconds → mm:ss
-  const formatTime = (time: number) => {
-    if (isNaN(time)) return "00:00";
-    const minutes = Math.floor(time / 60);
-    const seconds = Math.floor(time % 60);
-    return `${minutes < 10 ? "0" : ""}${minutes}:${
-      seconds < 10 ? "0" : ""
-    }${seconds}`;
+  const formatTime = (t: number) => {
+    if (isNaN(t)) return "00:00";
+    const m = Math.floor(t / 60);
+    const s = Math.floor(t % 60);
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  // Handle play/pause toggle using parent state
-  const togglePlay = () => {
-    togglePlayPause();
-  };
-
-  // Update progress as audio plays and inform parent
+  // Handle progress
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
     const handleTimeUpdate = () => {
-      setCurrentTime(audio.currentTime || 0);
-      seek?.(audio.currentTime || 0);
+      setCurrentTime(audio.currentTime);
+      seek?.(audio.currentTime);
     };
-
-    const handleLoadedMetadata = () => {
-      setDuration(audio.duration || 0);
-    };
+    const handleLoaded = () => setDuration(audio.duration);
 
     audio.addEventListener("timeupdate", handleTimeUpdate);
-    audio.addEventListener("loadedmetadata", handleLoadedMetadata);
+    audio.addEventListener("loadedmetadata", handleLoaded);
 
     return () => {
       audio.removeEventListener("timeupdate", handleTimeUpdate);
-      audio.removeEventListener("loadedmetadata", handleLoadedMetadata);
+      audio.removeEventListener("loadedmetadata", handleLoaded);
     };
   }, [seek]);
 
-  // Sync play/pause with parent state
+  // Sync play/pause
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    if (playerState.isPlaying) {
-      audio.play().catch(() => {});
-    } else {
-      audio.pause();
-    }
+    playerState.isPlaying ? audio.play().catch(() => {}) : audio.pause();
   }, [playerState.isPlaying]);
 
-  // When episode changes, load new source
+  // Load episode source
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
-    // Set source; use episode audioUrl if available, else fallback sample
-    const episode = playerState.currentEpisode;
-    const src =
-      (episode &&
-        typeof (episode as { audioUrl?: string }).audioUrl === "string" &&
-        (episode as { audioUrl?: string }).audioUrl) ||
-      "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3";
+    const src = playerState.currentEpisode?.audioUrl || "";
     if (audio.src !== src) {
       audio.src = src;
       audio.load();
       setCurrentTime(0);
-      // Autoplay if requested
-      if (playerState.isPlaying) {
-        audio.play().catch(() => {});
-      }
+      if (playerState.isPlaying) audio.play().catch(() => {});
     }
   }, [playerState.currentEpisode, playerState.isPlaying]);
 
-  // Handle user seeking (clicking progress bar)
+  // Handle seek
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!audioRef.current) return;
-    const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+    const audio = audioRef.current;
+    if (!audio) return;
+    const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const newTime = (clickX / rect.width) * duration;
-    audioRef.current.currentTime = newTime;
+    audio.currentTime = newTime;
     setCurrentTime(newTime);
-    seek?.(newTime);
   };
 
-  // Toggle full screen mode
-  const toggleFullScreen = () => {
-    setIsFullScreen(!isFullScreen);
-  };
+  // Toggle mobile fullscreen
+  const toggleFullScreen = () => setIsFullScreen(!isFullScreen);
 
   return (
     <>
-      {/* Desktop Player - Hidden on small screens */}
-      <div
-        className="hidden md:flex w-96 flex-col h-screen lg:h-screen"
-        style={{ backgroundColor: "#8257E5" }}
-      >
-        {/* Header */}
-        <div className="flex-1 flex justify-center items-center p-8 pb-4">
-          <div className="flex items-center space-x-2">
-            <Image
-              src="/assets/Headphone.svg"
-              alt="Now Playing"
-              width={32}
-              height={32}
-              className="w-8 h-8"
-            />
-            <span
-              className="text-white font-medium"
-              style={{
-                fontSize: "16px",
-                lineHeight: "20px",
-              }}
-            >
-              Tocando agora
-            </span>
-          </div>
+      {/* Desktop Layout */}
+      <div className="hidden md:flex w-96 flex-col h-screen bg-purple-600">
+        <div className="flex-1 flex justify-center items-center">
+          <PlayerHeader />
         </div>
-
-        {/* Player Content */}
-        <div className="flex-1 flex flex-col items-center justify-center p-6 py-25">
-          {playerState.currentEpisode ? (
-            <div
-              className="w-[320px] h-[360px] rounded-[24px] flex flex-col items-center justify-center gap-4 p-4"
-              style={{
-                background:
-                  "linear-gradient(143.8deg, rgba(145, 100, 250, 0.8) 0%, rgba(145, 100, 250, 0) 100%)",
-                borderColor: "#9F75FF",
-                borderWidth: 1.5,
-                borderStyle: "dashed",
-              }}
-            >
-              <Image
-                src={playerState.currentEpisode.thumbnail}
-                alt={playerState.currentEpisode.title}
-                width={200}
-                height={200}
-                className="w-48 h-48 object-cover rounded-xl"
-              />
-              <div className="text-center px-2">
-                <p className="text-white font-lexend font-semibold text-base line-clamp-2">
-                  {playerState.currentEpisode.title}
-                </p>
-                <p className="text-white/80 font-inter text-sm line-clamp-1">
-                  {playerState.currentEpisode.hosts}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div
-              className="w-[320px] h-[360px] border-[1.5px] border-dashed rounded-[24px] flex items-center justify-center"
-              style={{
-                background:
-                  "linear-gradient(143.8deg, rgba(145, 100, 250, 0.8) 0%, rgba(145, 100, 250, 0) 100%)",
-                borderColor: "#9F75FF",
-              }}
-            >
-              <p
-                className="text-center text-white"
-                style={{
-                  fontFamily: "Lexend",
-                  fontWeight: 600,
-                  fontSize: "18px",
-                  lineHeight: "22px",
-                }}
-              >
-                Selecione um podcast para ouvir
-              </p>
-            </div>
-          )}
+        <div className="flex-1 flex justify-center items-center">
+          <PlayerContent episode={playerState.currentEpisode} />
         </div>
-
-        {/* Player Controls */}
-        <div className="flex-1 flex flex-col justify-center p-8 pt-8">
-          {/* AUDIO ELEMENT */}
-          <audio ref={audioRef} />
-
-          {/* Progress Bar */}
-          <div className="mb-4 relative">
-            <div className="relative flex items-center justify-between gap-4">
-              {/* Left time */}
-              <span
-                className="text-white absolute left-0 mr-2"
-                style={{
-                  fontFamily: "Inter",
-                  fontWeight: 400,
-                  fontSize: "14px",
-                  lineHeight: "17px",
-                }}
-              >
-                {formatTime(currentTime)}
-              </span>
-
-              {/* Progress track container */}
-              <div className="flex-1 mx-8 relative" onClick={handleSeek}>
-                {/* Background track */}
-                <div
-                  className="w-full h-1.5 rounded-[10px]"
-                  style={{
-                    backgroundColor: "#9F75FF",
-                    opacity: 0.5,
-                  }}
-                />
-                {/* Progress fill - only visible when playing */}
-                <div
-                  className="absolute top-0 h-1.5 rounded-[10px] transition-all duration-300"
-                  style={{
-                    backgroundColor: "#444",
-                    width: `${
-                      duration > 0 ? (currentTime / duration) * 100 : 0
-                    }%`,
-                    visibility: duration > 0 ? "visible" : "hidden",
-                  }}
-                />
-                {/* Progress handle - only visible when playing */}
-                <div
-                  className="absolute top-[-2px] w-3 h-3 rounded-full border-4 border-solid transition-all duration-300"
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    borderColor: "#04D361",
-                    left: `${
-                      duration > 0 ? (currentTime / duration) * 100 : 0
-                    }%`,
-                    transform: "translateX(-50%)",
-                    visibility: duration > 0 ? "visible" : "hidden",
-                  }}
-                />
-              </div>
-
-              {/* Right time */}
-              <span
-                className="text-white absolute right-0 ml-2"
-                style={{
-                  fontFamily: "Inter",
-                  fontWeight: 400,
-                  fontSize: "14px",
-                  lineHeight: "17px",
-                }}
-              >
-                {formatTime(duration)}
-              </span>
-            </div>
-          </div>
+        <div className="flex-1 flex flex-col justify-center p-8">
+          <ProgressBar
+            currentTime={currentTime}
+            duration={duration}
+            onSeek={handleSeek}
+            formatTime={formatTime}
+          />
+          <PlayerControls
+            isPlaying={playerState.isPlaying}
+            togglePlay={togglePlayPause}
+            previous={previous}
+            next={next}
+            shuffle={shuffle}
+            repeat={repeat}
+          />
         </div>
-
-        {/* Control Buttons */}
-        <div className="flex-1 flex items-center justify-center space-x-6">
-          <button
-            className="text-white hover:text-gray-300 transition-colors"
-            onClick={shuffle}
-          >
-            <Image
-              src="/assets/Group.png"
-              alt="Shuffle"
-              width={24}
-              height={24}
-              className="w-6 h-6"
-            />
-          </button>
-
-          <button
-            className="text-white hover:text-gray-300 transition-colors"
-            onClick={previous}
-          >
-            <Image
-              src="/assets/play-previous.svg"
-              alt="Previous"
-              width={24}
-              height={24}
-              className="w-6 h-6"
-            />
-          </button>
-
-          <button
-            onClick={togglePlay}
-            className="w-12 h-12 flex items-center justify-center transition-colors"
-            style={{
-              backgroundColor: "#9164FA",
-              borderRadius: "16px",
-            }}
-          >
-            {playerState.isPlaying ? (
-              <Image
-                src="/assets/Union.png"
-                alt="Pause"
-                width={24}
-                height={24}
-                className="w-6 h-6"
-              />
-            ) : (
-              <Image
-                src="/assets/Vector.png"
-                alt="Play"
-                width={24}
-                height={24}
-                className="w-6 h-6"
-              />
-            )}
-          </button>
-
-          <button
-            className="text-white hover:text-gray-300 transition-colors"
-            onClick={next}
-          >
-            <Image
-              src="/assets/play-next.svg"
-              alt="Next"
-              width={24}
-              height={24}
-              className="w-6 h-6"
-            />
-          </button>
-
-          <button
-            className="text-white hover:text-gray-300 transition-colors"
-            onClick={repeat}
-          >
-            <Image
-              src="/assets/repeat.svg"
-              alt="Repeat"
-              width={24}
-              height={24}
-              className="w-6 h-6"
-            />
-          </button>
-        </div>
+        <audio ref={audioRef} />
       </div>
 
-      {/* Mobile Floating Circle Button */}
+      {/* Mobile Floating Button */}
       <div className="md:hidden fixed bottom-6 right-6 z-50">
         <button
           onClick={toggleFullScreen}
           className="w-16 h-16 bg-purple-600 rounded-full flex items-center justify-center shadow-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105"
         >
-          <Image
-            src="/assets/Headphone.svg"
-            alt="Audio Player"
-            width={24}
-            height={24}
-            className="w-6 h-6 text-white"
-          />
+          <Image src="/assets/Headphone.svg" alt="Audio Player" width={24} height={24} />
         </button>
       </div>
 
-      {/* Mobile Full Screen Overlay */}
+      {/* Mobile Fullscreen Overlay */}
       {isFullScreen && (
         <div className="md:hidden fixed inset-0 bg-purple-600 z-50 flex flex-col">
-          {/* Close Button */}
           <div className="flex justify-end p-6">
             <button
               onClick={toggleFullScreen}
-              className="w-10 h-10 bg-white bg-opacity-20 rounded-full flex items-center justify-center hover:bg-opacity-30 transition-all duration-200"
+              className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center hover:bg-white/30"
             >
               <svg
                 className="w-6 h-6 text-white"
@@ -375,200 +268,39 @@ export default function AudioPlayer() {
                 stroke="currentColor"
                 viewBox="0 0 24 24"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
-          {/* Player Header */}
-          <div className="flex justify-center items-center px-6">
-            <div className="flex items-center space-x-2">
-              <Image
-                src="/assets/Headphone.svg"
-                alt="Now Playing"
-                width={32}
-                height={32}
-                className="w-8 h-8"
-              />
-              <span
-                className="text-white font-medium"
-                style={{
-                  fontSize: "16px",
-                  lineHeight: "20px",
-                }}
-              >
-                Tocando agora
-              </span>
-            </div>
+          <div className="flex justify-center items-center">
+            <PlayerHeader />
           </div>
 
-          {/* Player Content */}
-          <div className="flex-1 flex flex-col items-center justify-center px-6">
-            <div
-              className="w-full max-w-sm h-80 border-[1.5px] border-dashed rounded-[24px] flex items-center justify-center"
-              style={{
-                background:
-                  "linear-gradient(143.8deg, rgba(145, 100, 250, 0.8) 0%, rgba(145, 100, 250, 0) 100%)",
-                borderColor: "#9F75FF",
-              }}
-            >
-              <p
-                className="text-center text-white px-4"
-                style={{
-                  fontFamily: "Lexend",
-                  fontWeight: 600,
-                  fontSize: "18px",
-                  lineHeight: "22px",
-                }}
-              >
-                Selecione um podcast para ouvir
-              </p>
-            </div>
+          <div className="flex-1 flex justify-center items-center">
+            <PlayerContent episode={playerState.currentEpisode} />
           </div>
 
-          {/* Progress Bar */}
           <div className="px-6 mb-6">
-            <div className="relative flex items-center justify-between gap-4">
-              {/* Left time */}
-              <span
-                className="text-white text-sm"
-                style={{
-                  fontFamily: "Inter",
-                  fontWeight: 400,
-                  fontSize: "14px",
-                  lineHeight: "17px",
-                }}
-              >
-                {formatTime(currentTime)}
-              </span>
-
-              {/* Progress track container */}
-              <div className="flex-1 mx-4 relative" onClick={handleSeek}>
-                {/* Background track */}
-                <div
-                  className="w-full h-1.5 rounded-[10px]"
-                  style={{
-                    backgroundColor: "#9F75FF",
-                    opacity: 0.5,
-                  }}
-                />
-                {/* Progress fill - only visible when playing */}
-                <div
-                  className="absolute top-0 h-1.5 rounded-[10px] transition-all duration-300"
-                  style={{
-                    backgroundColor: "#444",
-                    width: `${
-                      duration > 0 ? (currentTime / duration) * 100 : 0
-                    }%`,
-                    visibility: duration > 0 ? "visible" : "hidden",
-                  }}
-                />
-                {/* Progress handle - only visible when playing */}
-                <div
-                  className="absolute top-[-2px] w-3 h-3 rounded-full border-4 border-solid transition-all duration-300"
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    borderColor: "#04D361",
-                    left: `${
-                      duration > 0 ? (currentTime / duration) * 100 : 0
-                    }%`,
-                    transform: "translateX(-50%)",
-                    visibility: duration > 0 ? "visible" : "hidden",
-                  }}
-                />
-              </div>
-
-              {/* Right time */}
-              <span
-                className="text-white text-sm"
-                style={{
-                  fontFamily: "Inter",
-                  fontWeight: 400,
-                  fontSize: "14px",
-                  lineHeight: "17px",
-                }}
-              >
-                {formatTime(duration)}
-              </span>
-            </div>
+            <ProgressBar
+              currentTime={currentTime}
+              duration={duration}
+              onSeek={handleSeek}
+              formatTime={formatTime}
+            />
           </div>
 
-          {/* Control Buttons */}
-          <div className="flex items-center justify-center space-x-6 pb-8">
-            <button className="text-white hover:text-gray-300 transition-colors">
-              <Image
-                src="/assets/Group.png"
-                alt="Shuffle"
-                width={24}
-                height={24}
-                className="w-6 h-6"
-              />
-            </button>
-
-            <button className="text-white hover:text-gray-300 transition-colors">
-              <Image
-                src="/assets/play-previous.svg"
-                alt="Previous"
-                width={24}
-                height={24}
-                className="w-6 h-6"
-              />
-            </button>
-
-            <button
-              onClick={togglePlay}
-              className="w-12 h-12 flex items-center justify-center transition-colors"
-              style={{
-                backgroundColor: "#9164FA",
-                borderRadius: "16px",
-              }}
-            >
-              {playerState.isPlaying ? (
-                <Image
-                  src="/assets/Union.png"
-                  alt="Pause"
-                  width={24}
-                  height={24}
-                  className="w-6 h-6"
-                />
-              ) : (
-                <Image
-                  src="/assets/Vector.png"
-                  alt="Play"
-                  width={24}
-                  height={24}
-                  className="w-6 h-6"
-                />
-              )}
-            </button>
-
-            <button className="text-white hover:text-gray-300 transition-colors">
-              <Image
-                src="/assets/play-next.svg"
-                alt="Next"
-                width={24}
-                height={24}
-                className="w-6 h-6"
-              />
-            </button>
-
-            <button className="text-white hover:text-gray-300 transition-colors">
-              <Image
-                src="/assets/repeat.svg"
-                alt="Repeat"
-                width={24}
-                height={24}
-                className="w-6 h-6"
-              />
-            </button>
+          <div className="flex items-center justify-center pb-8">
+            <PlayerControls
+              isPlaying={playerState.isPlaying}
+              togglePlay={togglePlayPause}
+              previous={previous}
+              next={next}
+              shuffle={shuffle}
+              repeat={repeat}
+            />
           </div>
 
-          {/* AUDIO ELEMENT */}
           <audio ref={audioRef} />
         </div>
       )}
