@@ -1,217 +1,97 @@
-# Podcast Platform
+Podcastr – How the App Works 
 
-A modern podcast streaming platform built with Next.js frontend and Node.js/Express backend with MongoDB.
+Podcastr is a clean, lightweight app for discovering and listening to podcast episodes.
+This guide walks through how to use it from a listener’s perspective — no technical setup required.
 
-## Features
+ What You Can Do
 
-- 🎵 **Podcast Discovery**: Browse and discover podcasts by category
-- 🎧 **Audio Player**: Integrated audio player with play/pause controls
-- 📱 **Responsive Design**: Works seamlessly on desktop and mobile
-- 🔍 **Search & Filter**: Find episodes by title, host, or category
-- ⭐ **Featured Episodes**: Highlighted episodes on the homepage
-- 🎯 **Real-time Data**: Connected to MongoDB for dynamic content
+Browse featured episodes – Discover a curated list of recent or highlighted podcasts.
 
-## Tech Stack
+Explore all episodes – View every episode in a simple table with title, hosts, date, and duration.
 
-### Frontend
+Play audio directly – Start, pause, and resume playback using the built-in audio player.
 
-- **Next.js 14** - React framework
-- **TypeScript** - Type safety
-- **Tailwind CSS** - Styling
-- **Custom Components** - Reusable UI components
+Use it anywhere – The interface adapts to desktop, tablet, and mobile devices.
 
-### Backend
+ Getting Started
+1. Open the app
 
-- **Node.js** - Runtime environment
-- **Express.js** - Web framework
-- **MongoDB** - Database
-- **Mongoose** - ODM for MongoDB
-- **CORS** - Cross-origin resource sharing
-- **Helmet** - Security middleware
-- **Rate Limiting** - API protection
+When you open Podcastr, you’ll land on the homepage.
 
-## Getting Started
+The top section shows the brand header, and the main content area lists featured and recent episodes.
 
-### Prerequisites
+2. Featured Episodes
 
-- Node.js (v18 or higher)
-- MongoDB Atlas account (or local MongoDB)
+At the top, you’ll see a section labeled “Últimos lançamentos” (Latest Releases).
 
-### Installation
+Each card displays:
 
-1. **Clone the repository**
+Episode image
 
-   ```bash
-   git clone <repository-url>
-   cd ThePodcastTask
-   ```
+Title
 
-2. **Install backend dependencies**
+Hosts
 
-   ```bash
-   cd backend
-   npm install
-   ```
+Release date
 
-3. **Install frontend dependencies**
+Duration
 
-   ```bash
-   cd ../frontend
-   npm install
-   ```
+Click the play button on any featured episode to start listening immediately.
 
-4. **Set up environment variables**
+3. All Episodes Table
 
-   Create a `.env` file in the backend directory:
+Below the featured section is “Todos os episódios” (All Episodes).
 
-   ```env
-   MONGODB_URI=mongodb+srv://youssefabdelmaged50_db_user:6Lg0WCko3e1G7NST@cluster0.vbgcvao.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0
-   PORT=3001
-   NODE_ENV=development
-   CORS_ORIGIN=http://localhost:3000
-   ```
+Each row includes:
 
-5. **Seed the database**
+Thumbnail image
 
-   ```bash
-   cd backend
-   npm run seed
-   ```
+Episode title
 
-6. **Start the backend server**
+Hosts
 
-   ```bash
-   npm start
-   ```
+Date
 
-7. **Start the frontend development server**
+Duration
 
-   ```bash
-   cd frontend
-   npm run dev
-   ```
+Hit the play icon on the right to start playback for that episode.
 
-8. **Open your browser**
-   Navigate to `http://localhost:3000`
+🎧 Playing Audio
 
-## API Endpoints
+Once you hit play, the audio player appears automatically:
 
-### Episodes
+Desktop: A sidebar player appears on the right side of the screen.
 
-- `GET /api/episodes` - Get all episodes with pagination
-- `GET /api/episodes/featured` - Get featured episodes
-- `GET /api/episodes/:id` - Get single episode
-- `POST /api/episodes` - Create new episode
-- `PUT /api/episodes/:id` - Update episode
-- `DELETE /api/episodes/:id` - Delete episode
+Mobile: A compact player shows up at the bottom, and you can expand it with the floating headphone button.
 
-### Health Check
+Controls Available
 
-- `GET /health` - Server health status
+Play / Pause
 
-## Database Schema
+Seek – Click anywhere on the progress bar to jump forward or backward.
 
-### Episode Model
+Next / Previous / Shuffle / Repeat – Displayed visually; depending on the data source, these may not change the episode.
 
-```javascript
-{
-  title: String,
-  description: String,
-  hosts: String,
-  duration: String,
-  audioUrl: String,
-  thumbnail: String,
-  date: String,
-  publishedAt: Date,
-  isFeatured: Boolean,
-  category: String,
-  tags: [String],
-  playCount: Number,
-  rating: Number
-}
-```
+📱 Mobile Experience
 
-## Project Structure
+Tap the purple headphone button to open the full-screen player.
 
-```
-ThePodcastTask/
-├── backend/
-│   ├── config/
-│   │   └── database.js
-│   ├── models/
-│   │   ├── Episode.js
-│   │   └── Podcast.js
-│   ├── routes/
-│   │   └── episodes.js
-│   ├── scripts/
-│   │   └── seedData.js
-│   ├── index.js
-│   └── package.json
-├── frontend/
-│   ├── src/
-│   │   ├── api/
-│   │   ├── app/
-│   │   ├── components/
-│   │   ├── constants/
-│   │   ├── types/
-│   │   └── ui/
-│   └── package.json
-└── README.md
-```
+Use the large Play/Pause button and progress bar to control playback.
 
-## Features Implemented
+Tap the close (X) icon to exit the player and continue browsing.
 
-✅ **Backend Setup**
+ Episode Details
 
-- MongoDB connection with Mongoose
-- Express.js server with middleware
-- RESTful API endpoints
-- Error handling and validation
-- Rate limiting and security
+Each episode provides:
 
-✅ **Database Integration**
+Title
 
-- Episode and Podcast models
-- Seeded with sample data
-- Random audio URLs for testing
-- Proper indexing for performance
+Hosts (speakers)
 
-✅ **Frontend Integration**
+Publish date
 
-- Real API calls instead of dummy data
-- Loading states and error handling
-- Responsive design
-- TypeScript support
+Duration
 
-✅ **Error Handling**
+Thumbnail image
 
-- Global error boundary
-- API error responses
-- User-friendly error messages
-- Retry functionality
-
-## Development
-
-### Adding New Episodes
-
-You can add new episodes through the API or by updating the seed script in `backend/scripts/seedData.js`.
-
-### Customizing Audio URLs
-
-Update the `audioUrls` array in the seed script to use your own audio files.
-
-### Styling
-
-The app uses Tailwind CSS. Modify the classes in the components to change the appearance.
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
-
-## License
-
-This project is licensed under the ISC License.
+When an episode is playing, the player updates automatically to show its title and host information.
