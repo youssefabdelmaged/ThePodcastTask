@@ -23,7 +23,7 @@ export async function http<TResponse, TBody = unknown>(
         url.searchParams.set(key, String(value));
     });
   }
-console.log("Fetching URL:", url.toString());
+
   const res = await fetch(url.toString(), {
     method,
     headers: {
