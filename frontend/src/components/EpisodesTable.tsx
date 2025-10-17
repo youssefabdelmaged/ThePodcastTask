@@ -31,7 +31,7 @@ const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
             >
               {/* Table Header */}
               <thead>
-                <tr className="border-b border-border-primary">
+                <tr className="border-b border-[#E6E8EB]">
                   <th className="text-left pb-3">
                     <span className="text-xs font-lexend font-normal leading-tight text-text-muted uppercase">
                       Podcast
@@ -61,7 +61,7 @@ const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
                 {episodes.map((episode, index) => (
                   <tr
                     key={episode.title}
-                    className={`border-b border-border-primary hover:bg-secondary-light transition-colors duration-200 ${
+                    className={`border-b border-[#E6E8EB] hover:bg-secondary-light transition-colors duration-200 ${
                       index === episodes.length - 1 ? "border-b-0" : ""
                     }`}
                     onMouseEnter={() => setHoveredEpisode(episode.id)}
@@ -110,10 +110,10 @@ const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
                         <IconButton
                           src="/assets/img_play_arrow.png"
                           variant="secondary"
-                          size="medium"
-                          border_border_radius="rounded-sm"
-                          fill_background_color="bg-button-secondary"
-                          className={`border border-border-primary transition-all duration-200 ${
+                          size="small"
+                          border_border_radius="rounded-[8px]"
+                          fill_background_color="#F7F8FA"
+                          className={`border border-[#E6E8EB] transition-all duration-200 ${
                             hoveredEpisode === episode.id ? "scale-105" : ""
                           }`}
                           onClick={() => onPlayEpisode(episode)}
@@ -132,7 +132,7 @@ const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
             {episodes.map((episode) => (
               <div
                 key={`m${episode.title}`}
-                className="flex items-center justify-between p-3 bg-background-card border border-border-primary rounded-lg"
+                className="flex items-center justify-between p-3 bg-background-card border border-[#E6E8EB] rounded-lg"
               >
                 <div className="flex items-center gap-3">
                   <Image
@@ -157,8 +157,11 @@ const EpisodesTable = ({ episodes, onPlayEpisode }: EpisodesTableProps) => {
                 </div>
                 <IconButton
                   src="/assets/img_play_arrow.png"
-                  variant="ghost"
+                  variant="secondary"
                   size="small"
+                  border_border_radius="rounded-[8px]"
+                  fill_background_color="#F7F8FA"
+                  className="border border-[#E6E8EB]"
                   onClick={() => onPlayEpisode(episode)}
                   aria-label={`Play ${episode.title}`}
                 />

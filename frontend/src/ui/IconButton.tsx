@@ -37,6 +37,8 @@ interface IconButtonProps
   border_border_radius?: string;
   fill_background_color?: string;
   padding?: string;
+  // Icon rendering control
+  iconSize?: number; // in px; defaults per size variant
 
   // Optional parameters
   layout_width?: string;
@@ -53,6 +55,7 @@ const IconButton = ({
   border_border_radius = "rounded-sm",
   fill_background_color,
   padding,
+  iconSize,
 
   // Optional parameters
   layout_width,
@@ -133,11 +136,26 @@ const IconButton = ({
     >
       {src ? (
         <Image
-          width={8}
-          height={8}
+          // Choose a crisp default icon size based on button size
+          width={
+            iconSize ?? (size === "small" ? 16 : size === "large" ? 24 : 20)
+          }
+          height={
+            iconSize ?? (size === "small" ? 16 : size === "large" ? 24 : 20)
+          }
+          quality={100}
           src={src}
           alt="Icon"
-          className="w-full h-full object-contain"
+          className="object-contain"
+          style={{
+            width:
+              (iconSize ??
+                (size === "small" ? 16 : size === "large" ? 24 : 20)) + "px",
+            height:
+              (iconSize ??
+                (size === "small" ? 16 : size === "large" ? 24 : 20)) + "px",
+          }}
+          priority={false}
         />
       ) : (
         children
